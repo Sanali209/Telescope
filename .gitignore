@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# MongoDB
+*.db
+*.sqlite
+*.sqlite3
+data/
+mongodb_data/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Static Files (generated)
+app/static/uploads/
+app/static/cache/
+app/static/thumbnails/
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# OS
+Thumbs.db
+.DS_Store
+*.bak
+*.tmp
+
+# Project specific
+debug_data.py
+node_modules/
+package-lock.json
+*.pyc
