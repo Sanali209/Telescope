@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Card Editor Test</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+</head>
+<body>
+    <div id="test-container" style="width: 800px; height: 600px; background: #f0f0f0;"></div>
+    
+    <script src="/static/js/infinite_canvas.js"></script>
+    <script src="/static/js/card_editor.js"></script>
+    
+    <script>
+        // Test if classes are loaded
+        console.log('InfiniteCanvas loaded:', typeof InfiniteCanvas);
+        console.log('CardEditor loaded:', typeof CardEditor);
+        
+        // Initialize
+        const canvas = new InfiniteCanvas('test-container');
+        const editor = new CardEditor(canvas);
+        
+        console.log('Canvas initialized:', canvas);
+        console.log('Editor initialized:', editor);
+        
+        // Add a test card
+        const testCard = {
+            id: 'test-1',
+            type: 'text',
+            x: 100,
+            y: 100,
+            width: 300,
+            height: 200,
+            text: '# Test Card\n\nDouble-click me to test the editor!'
+        };
+        
+        canvas.addCard(testCard);
+        
+        // Listen for events
+        window.addEventListener('canvas_card_dblclick', (e) => {
+            console.log('Card double-clicked:', e.detail);
+            editor.open(e.detail.id, e.detail.text);
+        });
+        
+        window.addEventListener('card_content_saved', (e) => {
+            console.log('Card content saved:', e.detail);
+        });
+    </script>
+</body>
+</html>

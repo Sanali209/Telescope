@@ -1,0 +1,9 @@
+fastapi
+nicegui
+uvicorn
+beanie
+motor
+loguru
+pydantic
+python-dotenv
+markdown
