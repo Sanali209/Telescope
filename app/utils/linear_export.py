@@ -30,6 +30,9 @@ class NarrativeExporter:
             if parent_id and parent_id in self.nodes:
                 self.children[parent_id].append(node['id'])
 
+        # Index edge data for label lookup
+        self.edge_map = {(e['fromNode'], e['toNode']): e for e in edges}
+        
     def get_order(self) -> List[Dict]:
         """
         Returns a list of node objects in narrative order.
@@ -49,10 +52,27 @@ class NarrativeExporter:
                 return
             if node_id in path: # Cycle detection
                 return
+            
+            node = self.nodes[node_id]
+
+            # 0. Contextual Group Placement: If referenced node is in a group, ensure group is visited first
+            parent_id = node.get('parent_id')
+            if parent_id and parent_id in self.nodes and parent_id not in visited:
+                visit(parent_id)
+                # After visiting parent, this node should have been visited as a child.
+                # If so, return. If not (weird graph state), proceed.
+                if node_id in visited:
+                    return
+
+            # Filter Empty Groups
+            if node.get('type') == 'group':
+                children = self.children.get(node_id, [])
+                if not children:
+                    visited.add(node_id) # Mark visited so we don't process again
+                    return
 
             path.add(node_id)
             visited.add(node_id)
-            node = self.nodes[node_id]
             order.append(node)
             
             # 1. Visit children first (if group)
@@ -143,10 +163,14 @@ class NarrativeExporter:
             border-bottom: 1px solid #eee;
         }}
         .node-meta {{
-            font-size: 0.8em;
-            color: #7f8c8d;
+            font-size: 0.9em;
+            color: #555;
             margin-bottom: 0.5em;
+            background: #f9f9f9;
+            padding: 8px;
+            border-radius: 4px;
         }}
+        .ref-group {{ margin-bottom: 4px; }}
         img {{ max-width: 100%; height: auto; display: block; margin: 1em 0; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
         pre {{
             background: #f8f9fa;
@@ -201,7 +225,7 @@ class NarrativeExporter:
         if node_type == 'text':
             # Extract first line or use explicit title if available
             text = node.get('text') or ''
-            lines = text.strip().split('\n')
+            lines = text.strip().split('\\n')
             if lines and lines[0]:
                 return lines[0].replace('#', '').strip()
             return "Untitled Note"
@@ -255,20 +279,28 @@ class NarrativeExporter:
                 content_html += "</ul></div>"
         
         # Determine "See Also" links (outgoing connections)
-        outgoing = [
-            self.nodes[to_id] 
-            for to_id in self.adj.get(node_id, []) 
-            if to_id in self.nodes
-        ]
+        # Group links by label
+        links_by_label = defaultdict(list)
+        outgoing_ids = self.adj.get(node_id, [])
+        
+        for to_id in outgoing_ids:
+            if to_id in self.nodes:
+                target = self.nodes[to_id]
+                edge_data = self.edge_map.get((node_id, to_id), {})
+                label = edge_data.get('label') or "See also"
+                links_by_label[label].append(target)
         
         links_html = ""
-        if outgoing:
-            links_html = "<div class='node-meta'><strong>See also:</strong> "
-            links = []
-            for target in outgoing:
-                target_title = self._get_title(target)
-                links.append(f"<a href='#{target['id']}'>{target_title}</a>")
-            links_html += ", ".join(links) + "</div>"
+        if links_by_label:
+            links_html = "<div class='node-meta'>"
+            for label, targets in links_by_label.items():
+                target_links = []
+                for target in targets:
+                    target_title = self._get_title(target)
+                    target_links.append(f"<a href='#{target['id']}'>{target_title}</a>")
+                links_html += f"<div class='ref-group'><strong>{label}:</strong> {', '.join(target_links)}</div>"
+            links_html += "</div>"
+
 
         # Add tags to meta
         tags = node.get('tags', [])

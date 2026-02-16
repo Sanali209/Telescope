@@ -14,8 +14,8 @@ class InfiniteCanvas {
         this.layers = {
             grid: new Konva.Layer(),
             group: new Konva.Layer(),
-            card: new Konva.Layer(),
             edge: new Konva.Layer(),
+            card: new Konva.Layer(),
             ui: new Konva.Layer()
         };
 
@@ -159,6 +159,12 @@ class InfiniteCanvas {
         }
         const arrow = group.findOne('.collapse-arrow');
         if (arrow) arrow.text(collapsed ? '▶' : '▼');
+
+        const bg = group.findOne('.group-bg');
+        if (bg) {
+            bg.height(collapsed ? 36 : group.nodeData.height);
+        }
+
         this.layers.group.batchDraw();
         this.layers.card.batchDraw();
     }

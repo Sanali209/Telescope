@@ -380,7 +380,8 @@ class RenderingController {
         });
 
         const bg = new Konva.Rect({
-            width: nodeData.width, height: nodeData.height,
+            width: nodeData.width,
+            height: nodeData.collapsed ? 36 : nodeData.height,
             fill: nodeData.color || '#e5e7eb', opacity: 0.2,
             stroke: '#9ca3af', strokeWidth: 2, dash: [10, 5],
             cornerRadius: 8, name: 'group-bg'

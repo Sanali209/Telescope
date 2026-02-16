@@ -35,7 +35,7 @@ class GroupManager {
         const gx = groupGroup.x();
         const gy = groupGroup.y();
         const gw = groupGroup.nodeData.width;
-        const gh = groupGroup.nodeData.height;
+        const gh = groupGroup.nodeData.collapsed ? 36 : groupGroup.nodeData.height;
 
         // Check if card is strictly inside group content area (below header)
         // Group header is approx 36px

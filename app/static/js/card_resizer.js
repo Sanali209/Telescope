@@ -107,8 +107,8 @@ class CardResizer {
         }
 
         // Apply minimum dimensions
-        newWidth = Math.max(200, newWidth);
-        newHeight = Math.max(150, newHeight);
+        newWidth = Math.max(150, newWidth);
+        newHeight = Math.max(40, newHeight);
 
         // Update nodeData
         nodeData.width = newWidth;
@@ -299,8 +299,8 @@ class CardResizer {
 
                 if (!bg || !header) return;
 
-                const minWidth = 200;
-                const minHeight = 150;
+                const minWidth = 150;
+                const minHeight = 36;
                 const oldWidth = bg.width();
                 const oldHeight = bg.height();
                 let newWidth = oldWidth;
@@ -339,6 +339,10 @@ class CardResizer {
                     x: newWidth - handleSize / 2,
                     y: -handleSize / 2
                 });
+
+                // CRITICAL FIX: Update nodeData immediately so GroupManager sees the new size
+                nodeData.width = newWidth;
+                nodeData.height = newHeight;
 
                 this.canvas.layers.group.batchDraw();
             });
