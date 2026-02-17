@@ -82,24 +82,64 @@ class CardEditor {
             ">&times;</button>
         `;
 
+        // Title Input
+        const titleContainer = document.createElement('div');
+        titleContainer.style.cssText = 'padding: 20px 20px 0 20px;';
+
+        const titleLabel = document.createElement('div');
+        titleLabel.textContent = 'Title:';
+        titleLabel.style.cssText = 'font-size: 12px; font-weight: 500; color: #64748b; margin-bottom: 8px;';
+
+        this.titleInput = document.createElement('input');
+        this.titleInput.id = 'card-title-editor';
+        this.titleInput.placeholder = 'Card Title';
+        this.titleInput.style.cssText = `
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 4px;
+        `;
+
+        this.titleInput.addEventListener('focus', () => {
+            this.titleInput.style.borderColor = '#3b82f6';
+        });
+
+        this.titleInput.addEventListener('blur', () => {
+            this.titleInput.style.borderColor = '#cbd5e1';
+        });
+
+        titleContainer.appendChild(titleLabel);
+        titleContainer.appendChild(this.titleInput);
+
+        // Content Label
+        const contentLabel = document.createElement('div');
+        contentLabel.textContent = 'Content:';
+        contentLabel.style.cssText = 'padding: 10px 20px 0 20px; font-size: 12px; font-weight: 500; color: #64748b;';
+
         // Textarea
         const textareaContainer = document.createElement('div');
-        textareaContainer.style.cssText = 'padding: 20px; flex: 1;';
+        textareaContainer.style.cssText = 'padding: 8px 20px 20px 20px; flex: 1;';
 
         this.textarea = document.createElement('textarea');
         this.textarea.id = 'card-content-editor';
         this.textarea.placeholder = 'Enter card content (Markdown supported)...';
         this.textarea.style.cssText = `
             width: 100%;
-            min-height: 300px;
-            max-height: 60vh;
+            height: 100%;
+            min-height: 200px;
             padding: 12px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 14px;
             line-height: 1.6;
-            resize: vertical;
+            resize: none;
             outline: none;
             transition: border-color 0.2s;
         `;
@@ -226,6 +266,8 @@ class CardEditor {
 
         // Assemble editor
         this.editorEl.appendChild(header);
+        this.editorEl.appendChild(titleContainer);
+        this.editorEl.appendChild(contentLabel);
         this.editorEl.appendChild(textareaContainer);
         this.editorEl.appendChild(tagsContainer);
         this.editorEl.appendChild(colorContainer);
@@ -490,7 +532,20 @@ class CardEditor {
         this.originalTags = tags || [];
         this.originalColor = color || '#ffffff';
 
-        this.textarea.value = this.originalText;
+        // Split title and body
+        // Title = first line (cleaned of leading #)
+        // Body = rest of text
+        const lines = this.originalText.split('\n');
+        let title = '';
+        let body = '';
+
+        if (lines.length > 0) {
+            title = lines[0].replace(/^#+\s*/, '').trim();
+            body = lines.slice(1).join('\n').trim();
+        }
+
+        this.titleInput.value = title;
+        this.textarea.value = body;
         this.tagsInput.value = this.originalTags.join(', ');
 
         // Refresh autocomplete suggestions
@@ -522,6 +577,7 @@ class CardEditor {
         this.activeCardId = null;
         this.overlayEl.style.display = 'none';
         this.editorEl.style.display = 'none';
+        this.titleInput.value = '';
         this.textarea.value = '';
         this.tagsInput.value = '';
     }
@@ -529,7 +585,18 @@ class CardEditor {
     save() {
         if (!this.activeCardId) return;
 
-        const newContent = this.textarea.value;
+        const title = this.titleInput.value.trim();
+        const body = this.textarea.value; // Don't trim body to preserve meaningful whitespace if desired, or trim if preferred.
+
+        let newContent = '';
+        if (title) {
+            newContent = `# ${title}`;
+            if (body) {
+                newContent += `\n${body}`;
+            }
+        } else {
+            newContent = body;
+        }
         const newTags = this.tagsInput.value.split(',')
             .map(t => t.trim())
             .filter(t => t.length > 0);

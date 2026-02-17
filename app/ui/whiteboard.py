@@ -183,6 +183,7 @@ class WhiteboardView:
             'group_resized_backend': self.handlers.on_group_resized,
             'create_group_with_cards_backend': self.handlers.on_create_group_with_cards,
             'delete_nodes_backend': self.handlers.on_delete_nodes,
+            'delete_edges_backend': self.handlers.on_delete_edges,
             'toggle_group_collapse_backend': self.handlers.on_toggle_group_collapse,
             'group_edit_click_backend': self.handlers.on_group_edit_click,
             'restore_node_backend': self.handlers.on_restore_node,

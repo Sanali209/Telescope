@@ -1,4 +1,5 @@
 from nicegui import ui
+import os
 from app.models.whiteboard import Whiteboard
 from app.models.folder import Folder
 from typing import List, Optional, Dict
@@ -76,9 +77,12 @@ class WhiteboardList:
             ui.separator().classes('my-2')
             
             # Action Buttons
+            # Action Buttons
             with ui.row().classes('w-full px-2 gap-2'):
                 ui.button(on_click=self.create_whiteboard, icon='note_add').props('flat round dense size=sm').tooltip('New Whiteboard')
                 ui.button(on_click=self.create_folder, icon='create_new_folder').props('flat round dense size=sm').tooltip('New Folder')
+
+            self.render_data_actions()
 
     async def render_sortable_whiteboards(self, whiteboards: List[Whiteboard], folder_id: Optional[str]):
         # Manual SortableJS implementation
@@ -249,3 +253,47 @@ class WhiteboardList:
                     await self.refresh()
                 ui.button('Save', on_click=save)
         dialog.open()
+
+    # Data Export/Import Handlers
+    async def export_data(self):
+        from app.services.data_service import DataService
+        try:
+            zip_path = await DataService.export_all_data()
+            ui.download(zip_path, filename=os.path.basename(zip_path))
+            ui.notify('Backup ready for download', type='positive')
+        except Exception as e:
+            ui.notify(f"Export failed: {str(e)}", type='negative')
+
+    async def import_data(self, e):
+        from app.services.data_service import DataService
+        try:
+            # e.content is a file-like object
+            await DataService.import_all_data(e.content)
+            ui.notify('Data restored successfully', type='positive')
+            await self.refresh()
+            # If current whiteboard was deleted, navigate to root
+            ui.navigate.to('/')
+        except Exception as ex:
+            ui.notify(f"Import failed: {str(ex)}", type='negative')
+
+    def render_data_actions(self):
+        ui.separator().classes('my-2')
+        with ui.row().classes('w-full px-2 gap-2 justify-between'):
+             ui.label('Data Management').classes('text-xs text-slate-500 font-bold')
+        
+        with ui.row().classes('w-full px-2 gap-2'):
+            ui.button('Export Data', on_click=self.export_data, icon='cloud_download').props('flat dense size=sm w-full align=left').classes('text-slate-700')
+            
+            ui.button('Import Data', on_click=self.open_import_dialog, icon='cloud_upload').props('flat dense size=sm w-full align=left').classes('text-slate-700')
+
+    def open_import_dialog(self):
+        with ui.dialog() as dialog, ui.card():
+            ui.label('Import Data Backup').classes('text-lg font-bold')
+            ui.label('Warning: This will REPLACE all current data!').classes('text-red font-bold')
+            ui.upload(on_upload=lambda e: self.import_data_wrap(e, dialog), auto_upload=True, max_files=1).classes('w-full')
+            ui.button('Cancel', on_click=dialog.close).props('flat')
+        dialog.open()
+
+    async def import_data_wrap(self, e, dialog):
+        await self.import_data(e)
+        dialog.close()

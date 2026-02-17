@@ -73,7 +73,9 @@ class BoardService:
 
     @staticmethod
     async def delete_edge(edge_id: str, whiteboard_id: str) -> bool:
-        edge = await CanvasEdge.get(edge_id)
+        # Use find_one to match the id field specifically
+        edge = await CanvasEdge.find_one(CanvasEdge.id == edge_id)
+        
         if edge and edge.whiteboard_id == whiteboard_id:
             await edge.delete()
             return True

@@ -225,9 +225,9 @@ class NarrativeExporter:
         if node_type == 'text':
             # Extract first line or use explicit title if available
             text = node.get('text') or ''
-            lines = text.strip().split('\\n')
+            lines = text.strip().split('\n')
             if lines and lines[0]:
-                return lines[0].replace('#', '').strip()
+                return re.sub(r'^#+\s*', '', lines[0]).strip()
             return "Untitled Note"
         elif node_type == 'file':
             # Use filename as title if possible
