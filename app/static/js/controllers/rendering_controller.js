@@ -7,43 +7,52 @@ class RenderingController {
     }
 
     /**
-     * Draw the background grid
+     * Draw the background grid using a pattern for maximum performance
      */
     drawGrid() {
         const stage = this.canvas.stage;
         const layer = this.canvas.layers.grid;
-        layer.destroyChildren();
 
-        const scale = stage.scaleX();
-        const pos = stage.position();
+        // Only draw once if not already present
+        if (layer.getChildren().length > 0) {
+            const gridRect = layer.findOne('Rect');
+            if (gridRect) {
+                const scale = stage.scaleX();
+                const pos = stage.position();
+                gridRect.width(stage.width() / scale + 100);
+                gridRect.height(stage.height() / scale + 100);
+                gridRect.x(-pos.x / scale - 50);
+                gridRect.y(-pos.y / scale - 50);
+                gridRect.fillPatternOffset({ x: -pos.x / scale, y: -pos.y / scale });
+            }
+            return;
+        }
 
         const size = 50;
-        const width = stage.width() / scale;
-        const height = stage.height() / scale;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(size, 0);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, size);
+        ctx.stroke();
 
-        const startX = Math.floor(-pos.x / scale / size) * size;
-        const endX = startX + width + size;
-        const startY = Math.floor(-pos.y / scale / size) * size;
-        const endY = startY + height + size;
+        const gridRect = new Konva.Rect({
+            x: -10000, y: -10000,
+            width: 20000, height: 20000,
+            fillPatternImage: canvas,
+            fillPatternRepeat: 'repeat',
+            listening: false,
+            perfectDrawEnabled: false,
+            shadowForStrokeEnabled: false
+        });
 
-        for (let x = startX; x <= endX; x += size) {
-            layer.add(new Konva.Line({
-                points: [x, startY, x, endY],
-                stroke: '#e2e8f0',
-                strokeWidth: 0.5 / scale,
-                listening: false
-            }));
-        }
-
-        for (let y = startY; y <= endY; y += size) {
-            layer.add(new Konva.Line({
-                points: [startX, y, endX, y],
-                stroke: '#e2e8f0',
-                strokeWidth: 0.5 / scale,
-                listening: false
-            }));
-        }
-
+        layer.add(gridRect);
         layer.batchDraw();
     }
 
@@ -59,7 +68,9 @@ class RenderingController {
             shadowColor: 'rgba(0,0,0,0.15)',
             shadowOffset: { x: 0, y: 2 },
             cornerRadius: 8,
-            name: 'bg'
+            name: 'bg',
+            perfectDrawEnabled: false,
+            shadowForStrokeEnabled: false
         });
 
         // Drag handle
@@ -68,12 +79,13 @@ class RenderingController {
             height: 40,
             fill: '#f1f5f9',
             cornerRadius: [8, 8, 0, 0],
-            name: 'drag-handle'
+            name: 'drag-handle',
+            perfectDrawEnabled: false
         });
 
         // Title text
         const title = new Konva.Text({
-            text: this.extractTitle(nodeData.text),
+            text: nodeData.title || this.extractTitle(nodeData.text),
             fontSize: 15,
             fontStyle: 'bold',
             padding: 12,
@@ -133,7 +145,7 @@ class RenderingController {
 
         // Content preview
         const preview = new Konva.Text({
-            text: this.extractPreview(nodeData.text),
+            text: nodeData.preview || this.extractPreview(nodeData.text),
             fontSize: 13,
             y: 50,
             padding: 12,
@@ -286,7 +298,9 @@ class RenderingController {
             shadowBlur: 8,
             shadowColor: 'rgba(0,0,0,0.15)',
             cornerRadius: 8,
-            name: 'bg'
+            name: 'bg',
+            perfectDrawEnabled: false,
+            shadowForStrokeEnabled: false
         });
         group.add(bg);
 
@@ -384,7 +398,9 @@ class RenderingController {
             height: nodeData.collapsed ? 36 : nodeData.height,
             fill: nodeData.color || '#e5e7eb', opacity: 0.2,
             stroke: '#9ca3af', strokeWidth: 2, dash: [10, 5],
-            cornerRadius: 8, name: 'group-bg'
+            cornerRadius: 8, name: 'group-bg',
+            perfectDrawEnabled: false,
+            shadowForStrokeEnabled: false
         });
 
         const header = new Konva.Rect({
@@ -566,6 +582,27 @@ class RenderingController {
             .replace(/\*/g, '')
             .replace(/`/g, '');
         return cleanText;
+    }
+
+    /**
+     * Cache a card or group for performance
+     */
+    cacheItem(item) {
+        if (!item) return;
+        try {
+            // Buffer for shadows and strokes
+            const buffer = 10;
+            item.cache({
+                offset: buffer,
+                width: item.width() + buffer * 2,
+                height: item.height() + buffer * 2,
+                pixelRatio: window.devicePixelRatio || 1
+            });
+            this.canvas.layers.card.batchDraw();
+            this.canvas.layers.group.batchDraw();
+        } catch (e) {
+            console.warn('[CACHE] Failed to cache item:', e);
+        }
     }
 }
 

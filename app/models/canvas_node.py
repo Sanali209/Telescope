@@ -74,3 +74,17 @@ class CanvasNode(Document):
         elif self.type == "file":
             return self.file or "File"
         return "Untitled"
+
+    def get_preview(self) -> str:
+        """Extract preview content from text (everything after first line)"""
+        if self.type == "text" and self.text:
+            lines = self.text.strip().split('\n')
+            if len(lines) <= 1:
+                return ""
+            content = "\n".join(lines[1:]).strip()
+            # Clean up common markdown
+            import re
+            content = re.sub(r'^#+\s*', '', content, flags=re.MULTILINE)
+            content = re.sub(r'[*`]', '', content)
+            return content
+        return ""

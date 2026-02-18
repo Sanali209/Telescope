@@ -264,7 +264,8 @@ class WhiteboardView:
                 'text': n.text, 'file': n.file, 'color': n.color, 'parent_id': n.parent_id,
                 'collapsed': n.collapsed if hasattr(n, 'collapsed') else False,
                 'sub_whiteboard_id': n.sub_whiteboard_id, 'tags': n.tags if hasattr(n, 'tags') else [],
-                'exclude_from_export': n.exclude_from_export if hasattr(n, 'exclude_from_export') else False
+                'exclude_from_export': n.exclude_from_export if hasattr(n, 'exclude_from_export') else False,
+                'title': n.get_title(), 'preview': n.get_preview()
             } for n in self.nodes
         ])
     

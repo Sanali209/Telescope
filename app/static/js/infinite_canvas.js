@@ -25,6 +25,7 @@ class InfiniteCanvas {
         this.selectedCards = new Set();
         this.panMode = false;
         this.currentFilter = '';
+        this.edgeMap = new Map(); // cardId -> Set of edge groups
 
         // Controllers
         this.selectionController = new SelectionController(this);
@@ -54,6 +55,13 @@ class InfiniteCanvas {
     addEdge(edgeData, fromNode, toNode) {
         const edgeGroup = this.renderingController.addEdge(edgeData, fromNode, toNode);
         this.layers.edge.add(edgeGroup);
+
+        // Register in O(1) edge map
+        if (!this.edgeMap.has(edgeData.fromNode)) this.edgeMap.set(edgeData.fromNode, new Set());
+        if (!this.edgeMap.has(edgeData.toNode)) this.edgeMap.set(edgeData.toNode, new Set());
+        this.edgeMap.get(edgeData.fromNode).add(edgeGroup);
+        this.edgeMap.get(edgeData.toNode).add(edgeGroup);
+
         this._setupEdgeEvents(edgeGroup, edgeData);
         this.layers.edge.batchDraw();
         return edgeGroup;
@@ -116,6 +124,7 @@ class InfiniteCanvas {
         group.on('dragstart', () => {
             dragStartPos = { x: group.x(), y: group.y() };
             group.moveToTop();
+            group.clearCache(); // Uncache during interaction
         });
 
         group.on('dragmove', () => {
@@ -133,6 +142,9 @@ class InfiniteCanvas {
 
             if (window.undoManager) window.undoManager.recordMove(nodeData.id, dragStartPos, pos);
             if (window.groupManager) window.groupManager.onCardDrop(nodeData.id, group);
+
+            // Re-cache after interaction
+            setTimeout(() => this.renderingController.cacheItem(group), 0);
         });
 
         group.on('click tap', (e) => {
@@ -142,6 +154,7 @@ class InfiniteCanvas {
 
         group.on('dblclick dbltap', (e) => {
             if (nodeData.type === 'file' || e.target.getParent()?.name() === 'edit-button') return;
+            group.clearCache(); // Must clear for editing
             this.emitEvent('card_dblclick', { id: nodeData.id, text: nodeData.text || '', tags: nodeData.tags || [] });
         });
     }
@@ -186,11 +199,59 @@ class InfiniteCanvas {
     updateViewport() {
         const pos = this.stage.position();
         const scale = this.stage.scaleX();
-        this.emitEvent('viewport_changed', { x: pos.x, y: pos.y, scale: scale });
+
+        // Immediate local logic (grid, culling)
+        this.drawGrid();
+        this.updateVisibility();
+
+        // Throttled backend sync
+        if (this._viewportTimeout) clearTimeout(this._viewportTimeout);
+        this._viewportTimeout = setTimeout(() => {
+            this.emitEvent('viewport_changed', { x: pos.x, y: pos.y, scale: scale });
+        }, 100);
+    }
+
+    updateVisibility() {
+        const stage = this.stage;
+        const scale = stage.scaleX();
+        const pos = stage.position();
+
+        const viewport = {
+            x1: -pos.x / scale - 500,
+            y1: -pos.y / scale - 500,
+            x2: (-pos.x + stage.width()) / scale + 500,
+            y2: (-pos.y + stage.height()) / scale + 500
+        };
+
+        // Cull cards
+        this.layers.card.getChildren().forEach(card => {
+            const x = card.x();
+            const y = card.y();
+            const isVisible = x > viewport.x1 && x < viewport.x2 && y > viewport.y1 && y < viewport.y2;
+            if (card.visible() !== isVisible) {
+                card.visible(isVisible);
+            }
+        });
+
+        // Cull edges (optional but recommended for large sets)
+        this.layers.edge.getChildren().forEach(edge => {
+            const edgeData = edge.attrs.edgeData;
+            if (!edgeData) return;
+            // Simple visibility based on endpoints (could be more precise)
+            const fromCard = this.layers.card.findOne(`#card-${edgeData.fromNode}`) || this.layers.group.findOne(`#group-${edgeData.fromNode}`);
+            const isVisible = fromCard ? fromCard.visible() : true;
+            if (edge.visible() !== isVisible) edge.visible(isVisible);
+        });
+
+        this.layers.card.batchDraw();
+        this.layers.edge.batchDraw();
     }
 
     _setupGroupEvents(group, nodeData) {
-        group.on('dragstart', () => group.moveToTop());
+        group.on('dragstart', () => {
+            group.moveToTop();
+            group.clearCache();
+        });
         group.on('dragmove', () => {
             const pos = group.position();
             this.updateConnectedEdges(nodeData.id);
@@ -217,6 +278,9 @@ class InfiniteCanvas {
                     }
                 });
             }
+
+            // Re-cache group
+            setTimeout(() => this.renderingController.cacheItem(group), 0);
         });
         group.on('click tap', (e) => {
             if (group.isDragging()) return;
@@ -231,12 +295,16 @@ class InfiniteCanvas {
     }
 
     updateConnectedEdges(cardId) {
-        const edgeGroups = this.layers.edge.find('.edge-group');
+        const edgeGroups = this.edgeMap.get(cardId);
+        if (!edgeGroups) return;
+
         edgeGroups.forEach(group => {
             const edgeData = group.attrs.edgeData;
-            if (!edgeData || (edgeData.fromNode !== cardId && edgeData.toNode !== cardId)) return;
+            if (!edgeData) return;
+
             const fromCard = this.layers.card.findOne(`#card-${edgeData.fromNode}`) || this.layers.group.findOne(`#group-${edgeData.fromNode}`);
             const toCard = this.layers.card.findOne(`#card-${edgeData.toNode}`) || this.layers.group.findOne(`#group-${edgeData.toNode}`);
+
             if (fromCard && toCard) {
                 const fromPos = fromCard.position();
                 const toPos = toCard.position();

@@ -85,12 +85,21 @@ This document outlines the design for a visual knowledge management application 
     - **Collections**: `cards`, `whiteboards`, `links`, `tags`.
 - **Logging**: Loguru for structured and easy logging.
 
-### 4.2 Frontend (NiceGUI)
-- **Integration**: NiceGUI mounted on the FastAPI app using `ui.run_with(app)`. This allows both standard API endpoints and the UI to run on the same server instance/port.
-- **Framework**: NiceGUI for building the UI in Python.
-- **State Management**: Leveraging NiceGUI's binding capabilities and potentially a global state store.
-- **Interactivity**:
-    - Using NiceGUI's drag-and-drop primitives or integrating a JS library (like interacting.js or simply raw DOM events via NiceGUI's `ui.element` capabilities) for the whiteboard canvas.
+### 4.2 Frontend (NiceGUI & Konva.js)
+- **Integration**: NiceGUI handles the application shell, routing, and property panels, while **Konva.js** renders the high-performance infinite canvas.
+- **Canvas Architecture**:
+    - **Layering System**:
+        - `Grid Layer`: Static background pattern (optimized for free panning).
+        - `Group Layer`: Containers for card grouping.
+        - `Edge Layer`: Connections between cards (arrows/lines).
+        - `Card Layer`: The main content nodes (Text, Images).
+        - `UI Layer`: Overlay controls (Selection boxes, localized tools).
+    - **Performance Strategy**:
+        - **Pattern-Based Grid**: Uses a single repeating fill pattern instead of thousands of line objects.
+        - **Smart Caching**: Cards and groups are rasterized (`.cache()`) when idle to minimize draw calls, and un-cached instantly during interaction.
+        - **O(1) Edge Lookups**: An optimized map (`nodeId -> Set<Edge>`) ensures instant updates when moving connected cards, avoiding O(N) iterations.
+        - **View Culling**: Elements outside the viewport are hidden to reduce rendering overhead.
+        - **Throttling**: Viewport synchronization with the backend is debounced (100ms) to prevent network congestion.
 
 ### 4.3 Data Models
 - **Card**:
