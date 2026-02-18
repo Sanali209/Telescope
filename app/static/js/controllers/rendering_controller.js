@@ -590,14 +590,20 @@ class RenderingController {
     cacheItem(item) {
         if (!item) return;
         try {
-            // Buffer for shadows and strokes
-            const buffer = 10;
+            // Get accurate bounding box (including shadows/strokes) in local coordinates
+            const rect = item.getClientRect({ skipTransform: true });
+
+            // Add a small safety buffer
+            const buffer = 5;
+
             item.cache({
-                offset: buffer,
-                width: item.width() + buffer * 2,
-                height: item.height() + buffer * 2,
+                x: rect.x - buffer,
+                y: rect.y - buffer,
+                width: rect.width + buffer * 2,
+                height: rect.height + buffer * 2,
                 pixelRatio: window.devicePixelRatio || 1
             });
+
             this.canvas.layers.card.batchDraw();
             this.canvas.layers.group.batchDraw();
         } catch (e) {
